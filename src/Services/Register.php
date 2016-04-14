@@ -4,26 +4,16 @@ use Simon\Authl\Services\Interfaces\RegisterInterface;
 use Illuminate\Support\Facades\Validator;
 use Simon\Authl\Models\User;
 use Simon\Authl\Models\AuthLog;
-class Register extends Auth implements RegisterInterface
+class Register extends AbsAuth implements RegisterInterface
 {
 	
-	protected $name = null;
+	protected $log;
 	
-	protected $password = null;
-	
-	protected $email = null;
-	
-	protected $mobile = null;
-	
-	public function __construct(User $User)
+	public function __construct(User $User,AuthLog $Log)
 	{
 		parent::__construct();
-		
 		$this->model = $User;
-		$this->name = config('fields.name');
-		$this->password = config('fields.password');
-		$this->email = config('fields.email');
-		$this->mobile = config('fields.mobile');
+		$this->log = $Log;
 	}
 	
 	public function validator()
@@ -41,9 +31,9 @@ class Register extends Auth implements RegisterInterface
 		}
 	}
 	
-	public function checkRegisterTime(AuthLog $AuthLog)
+	public function checkRegisterTime()
 	{
-		$log = $AuthLog->where('client_ip',ip_long($this->request->ip()))->orderBy(AuthLog::CREATED_AT,'desc')->first();
+		$log = $this->log->where('client_ip',ip_long($this->request->ip()))->orderBy(AuthLog::CREATED_AT,'desc')->first();
 		if($log && time() - $log->create_at < config('allow_register_max_time'))
 		{
 			throw new \Exception('time out');
@@ -69,11 +59,31 @@ class Register extends Auth implements RegisterInterface
 		}
 	}
 	
+	public function saveUser(array $data = [])
+	{
+		$this->model = $this->model->create(array_merge([
+			$this->name=>$this->request->input('name'),
+			$this->email=>$this->request->input('email'),
+			$this->password=>bcrypt($this->request->input('password')),
+			$this->mobile=>$this->request->input('mobile'),
+		],$data));
+		
+		$this->log->create([
+			'name'=>$this->model->name,
+			'email'=>$this->model->email,
+			'created_uid'=>$this->model->id,
+			'type'=>'register',
+			'table'=>config('user_table'),
+		]);
+	}
+	
 	public function auth() 
 	{
 		$this->validator();
 		
 		$this->checkUserIsExists();
+		
+		$this->checkRegisterTime(AuthLog $AuthLog);
 	}
 	
 }

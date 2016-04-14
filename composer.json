@@ -1,0 +1,32 @@
+{
+    "name": "simon/authl",
+    "description": "a public global auth",
+    "keywords": ["auth", "crcms", "laravel"],
+    "homepage": "https://github.com/hiword/auth",
+    "license" : "MIT",
+    "authors": [
+        {
+            "name": "simon",
+            "homepage": "http://crcms.cn"
+        }
+    ],
+    "require": {
+        "php": ">=5.5.9"
+    },
+    "require-dev": {
+    },
+    "autoload": {
+        "psr-4": {
+            "Simon\\Authl\\": "src/"
+        },
+        "files": [
+        	"src/helper.php"
+        ]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.01-dev"
+        }
+    },
+    "minimum-stability": "dev"
+}

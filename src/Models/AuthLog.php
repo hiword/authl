@@ -3,6 +3,7 @@ namespace Simon\Authl\Models;
 use Illuminate\Database\Eloquent\Model;
 class AuthLog extends Model
 {
+	protected $guarded = [];
 	
 	const TYPE_REGISTER = 1;
 	
@@ -22,8 +23,8 @@ class AuthLog extends Model
 		return $query->where('type',$type);
 	}
 	
-	public function scopeStatus($query,$type) 
+	public function scopeStatus($query,$status) 
 	{
-		return $query->where('status',$type);
+		return $query->where('status',$status);
 	}
 }

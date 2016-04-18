@@ -21,7 +21,7 @@ class Login extends AbsLogin implements AuthInterface
 			'name'=>$this->request->input('name'),
 			'type'=>AuthLog::TYPE_LOGIN,
 			'status'=>$status,
-			'ip'=>ip_long($this->request->ip()),
+			'client_ip'=>ip_long($this->request->ip()),
 		]);
 	}
 
@@ -50,7 +50,8 @@ class Login extends AbsLogin implements AuthInterface
 	protected function getUser()
 	{
 		// TODO Auto-generated method stub
-		$this->model = $this->model->where('name',$this->request->input('name'))->get();
+		$this->model = $this->model->where('name',$this->request->input('name'))->first();
+		
 		if (empty($this->model))
 		{
 			//log
@@ -80,14 +81,14 @@ class Login extends AbsLogin implements AuthInterface
 	{
 		// TODO Auto-generated method stub
 		$counts = $this->log
-				->whereBetween('created_at',[strtolower(Carbon::today()),strtolower(Carbon::tomorrow())])
+				->whereBetween('created_at',[Carbon::today(),Carbon::tomorrow()])
 				->clientIp($this->request->ip())
 				->type(AuthLog::TYPE_LOGIN)
 				->orderBy(AuthLog::CREATED_AT,'desc')
 				->status(AuthLog::STATUS_ERROR)
 				->count();
 		
-		if($counts > config('allow_login_error_count'))
+		if($counts > config('authl.allow_login_error_count'))
 		{
 			throw new \Exception('login error num max');
 		}
@@ -101,7 +102,7 @@ class Login extends AbsLogin implements AuthInterface
 	protected function validator()
 	{
 		// TODO Auto-generated method stub
-		Validator::make($this->request->all(),[
+		$validator = Validator::make($this->request->all(),[
 			'name'=>['required','regex:/^[\w]{3,15}$/'],
 			'password'=>['required','min:3','max:20']
 		]);

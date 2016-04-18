@@ -1,28 +1,71 @@
 <?php
 namespace Simon\Authl\Services;
-use Simon\Authl\Services\Interfaces\RegisterInterface;
+use Simon\Authl\Services\Interfaces\AbsAuth;
+use Simon\Authl\Services\Interfaces\AuthInterface;
+use Simon\Authl\Services\Interfaces\AbsRegister;
 use Illuminate\Support\Facades\Validator;
-use Simon\Authl\Models\User;
 use Simon\Authl\Models\AuthLog;
-class Register extends AbsAuth implements RegisterInterface
+class Register extends AbsRegister implements AuthInterface
 {
-	
-	protected $log;
-	
-	public function __construct(User $User,AuthLog $Log)
+	/* 
+	 * (non-PHPdoc)
+	 * @see \Simon\Authl\Services\Interfaces\AbsRegister::saveUser()
+	 * @author simon
+	 */
+	protected function saveUser(array $data = [])
 	{
-		parent::__construct();
-		$this->model = $User;
-		$this->log = $Log;
+		// TODO Auto-generated method stub
+		$old = [
+			'name'=>$this->request->input('name'),
+			'password'=>$this->request->input('password'),
+		];
+		
+		$data = array_merge($old,$data);
+		
+		$this->model = $this->model->create($data);
+		
+		return $this->model;
 	}
-	
-	public function validator()
+
+	/* 
+	 * (non-PHPdoc)
+	 * @see \Simon\Authl\Services\Interfaces\AbsAuth::checkCode()
+	 * @author simon
+	 */
+	protected function checkCode()
 	{
+		// TODO Auto-generated method stub
+		
+	}
+
+	/* 
+	 * (non-PHPdoc)
+	 * @see \Simon\Authl\Services\Interfaces\AbsAuth::checkPostTime()
+	 * @author simon
+	 */
+	protected function checkPostTime()
+	{
+		// TODO Auto-generated method stub
+		$log = $this->log->where('client_ip',ip_long($this->request->ip()))->orderBy(AuthLog::CREATED_AT,'desc')->first();
+		if($log && time() - $log->created_at < config('allow_register_max_time'))
+		{
+			throw new \Exception('time out');
+		}
+	}
+
+	/* 
+	 * (non-PHPdoc)
+	 * @see \Simon\Authl\Services\Interfaces\AbsAuth::validator()
+	 * @author simon
+	 */
+	protected function validator()
+	{
+		// TODO Auto-generated method stub
 		$validator = Validator::make($this->request->all(), [
-			$this->name => ['required','regex:/^[\w]{3,15}$/','unique:'.config('user_table')],
-			$this->password => ['required','max:16','min:6'],
-			$this->email => ['required','email','unique:'.config('user_table')],
-			$this->mobile => ['required','mobile','unique:'.config('user_table')],
+			'name' => ['required','regex:/^[\w]{3,15}$/','unique:'.config('user_table')],
+			'password' => ['required','max:16','min:6'],
+// 			'email' => ['required','email','unique:'.config('user_table')],
+// 			'mobile' => ['required','mobile','unique:'.config('user_table')],
 		]);
 		
 		if ($validator->fails())
@@ -30,60 +73,40 @@ class Register extends AbsAuth implements RegisterInterface
 			throw new \Exception($validator->errors()->first());
 		}
 	}
-	
-	public function checkRegisterTime()
+
+	/* 
+	 * (non-PHPdoc)
+	 * @see \Simon\Authl\Services\Interfaces\AbsAuth::log()
+	 * @author simon
+	 */
+	protected function log($type)
 	{
-		$log = $this->log->where('client_ip',ip_long($this->request->ip()))->orderBy(AuthLog::CREATED_AT,'desc')->first();
-		if($log && time() - $log->create_at < config('allow_register_max_time'))
-		{
-			throw new \Exception('time out');
-		}
-	}
-	
-	public function checkMobileCode()
-	{
+		// TODO Auto-generated method stub
 		
 	}
-	
-	public function checkUserIsExists() 
+
+	/* 
+	 * (non-PHPdoc)
+	 * @see \Simon\Authl\Services\Interfaces\AuthInterface::auth()
+	 * @author simon
+	 */
+	public function auth(array $data = [])
 	{
-		$this->model = $this->model
-			->where($this->name,$this->request->input($this->name))
-			->orWhere($this->email,$this->request->input($this->email))
-			->orWhere($this->mobile,$this->request->input($this->mobile))
-			->first();
+		// TODO Auto-generated method stub
+		$this->checkCode();
 		
-		if($this->model)
-		{
-			throw new \Exception('user is exists');
-		}
-	}
-	
-	public function saveUser(array $data = [])
-	{
-		$this->model = $this->model->create(array_merge([
-			$this->name=>$this->request->input('name'),
-			$this->email=>$this->request->input('email'),
-			$this->password=>bcrypt($this->request->input('password')),
-			$this->mobile=>$this->request->input('mobile'),
-		],$data));
-		
-		$this->log->create([
-			'name'=>$this->model->name,
-			'email'=>$this->model->email,
-			'created_uid'=>$this->model->id,
-			'type'=>'register',
-			'table'=>config('user_table'),
-		]);
-	}
-	
-	public function auth() 
-	{
 		$this->validator();
 		
-		$this->checkUserIsExists();
+		$this->checkPostTime();
 		
-		$this->checkRegisterTime(AuthLog $AuthLog);
+		$this->saveUser($data);
+		
+		$this->log(AuthLog::STATUS_SUCCESS);
+		
+		return $this->model;
 	}
+
+	
+	
 	
 }
